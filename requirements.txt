@@ -5,10 +5,4 @@ google-generativeai==0.3.2
 deep-translator==1.11.4
 gTTS==2.5.1
 SpeechRecognition==3.10.1
-soundfile==0.12.1
-flask[async]==3.0.0
-hypercorn==0.15.0
-pip
-setuptools>=70.0
-wheel>=0.45
-
+soundfile==0.12.1 
