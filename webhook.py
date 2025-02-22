@@ -53,11 +53,11 @@ user_states = {}
 app = Flask(__name__)
 
 # Telegram bot uygulamasını oluştur
-token = os.getenv("TELEGRAM_TOKEN")
-if not token:
-    raise ValueError("TELEGRAM_TOKEN bulunamadı!")
+TOKEN = os.getenv("TELEGRAM_TOKEN")
+if not TOKEN:
+    raise ValueError("No TELEGRAM_TOKEN provided")
 
-application = Application.builder().token(token).build()
+application = Application.builder().token(TOKEN).build()
 
 # Yöntem 1: Random string oluşturma
 secret_token = secrets.token_hex(32)  # 64 karakterlik güvenli bir token oluşturur
@@ -665,25 +665,28 @@ async def homepage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
+@app.route('/webhook', methods=['POST'])
 async def webhook():
-    """Handle incoming webhook requests"""
     try:
-        logger.info("Webhook update received")
+        logger.info("Webhook request received")
         
-        # Gelen isteğin header'ında token kontrolü
+        # Log request details
+        logger.debug(f"Headers: {dict(request.headers)}")
+        logger.debug(f"Data: {request.get_data().decode()}")
+        
+        # Token validation
         auth_header = request.headers.get('Authorization')
         expected_token = os.getenv("SECRET_TOKEN")
         
-        # Token kontrolü
         if not auth_header or auth_header != f'Bearer {expected_token}':
             logger.warning("Unauthorized access attempt")
             return Response('Unauthorized', status=401)
         
-        # İşlemler devam eder...
+        # Process update
         update_data = request.get_json(force=True)
         update = Update.de_json(update_data, application.bot)
         
-        # Burayı await ile çağırın
+        # Process the update
         await application.process_update(update)
         return Response('ok', status=200)
         
@@ -691,41 +694,24 @@ async def webhook():
         logger.error(f"Error in webhook: {str(e)}", exc_info=True)
         return Response(str(e), status=500)
 
-@app.route('/webhook', methods=['POST'])
-async def handle_webhook():
-    return await webhook()
-
 @app.route('/webhook', methods=['GET'])
 def get_webhook():
-    """Handle GET requests to webhook"""
-    logger.info("GET request received at webhook endpoint")
     return Response("Webhook is active", status=200)
 
-# Add these lines before the main() function
-def setup_handlers():
-    """Set up message handlers"""
-    logger.info("Setting up message handlers")
-    try:
-        application.add_handler(CommandHandler("start", start_command))
-        application.add_handler(CommandHandler("homepage", homepage))
-        application.add_handler(CallbackQueryHandler(button_handler))
-        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-        application.add_handler(MessageHandler(filters.VOICE, message_handler))
-        logger.info("Message handlers set up successfully")
-    except Exception as e:
-        logger.error(f"Error setting up handlers: {str(e)}", exc_info=True)
+# Basic command handler
+async def start(update, context):
+    await update.message.reply_text("Hello! I'm your bot.")
 
-# Update the main() function
-def main() -> None:
-    """Run the bot."""
-    logger.info("Starting the bot")
-    try:
-        setup_handlers()
-        logger.info("Bot started successfully")
-    except Exception as e:
-        logger.error(f"Error starting bot: {str(e)}", exc_info=True)
+# Set up handlers
+def setup_handlers():
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("homepage", homepage))
+    application.add_handler(CallbackQueryHandler(button_handler))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    application.add_handler(MessageHandler(filters.VOICE, message_handler))
 
 if __name__ == "__main__":
     config = Config()
     config.bind = [f"0.0.0.0:{int(os.environ.get('PORT', 5000))}"]
+    setup_handlers()
     asyncio.run(serve(app, config))
