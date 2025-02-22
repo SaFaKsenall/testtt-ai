@@ -1,0 +1,10 @@
+# Dev environment
+python-telegram-bot==20.7
+python-dotenv==1.0.0
+requests==2.31.0
+google-generativeai==0.3.2
+deep-translator==1.11.4
+gTTS==2.5.1
+SpeechRecognition==3.10.1
+soundfile==0.12.1 
+hypercorn==0.15.0
