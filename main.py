@@ -615,6 +615,7 @@ def main():
     if not token:
         raise ValueError("TELEGRAM_TOKEN not found! Please check your .env file.")
     
+    # Build the application
     application = Application.builder().token(token).build()
 
     # Add handlers
@@ -623,8 +624,9 @@ def main():
     application.add_handler(MessageHandler(filters.TEXT | filters.VOICE, message_handler))
     application.add_handler(CommandHandler("homepage", homepage))
 
-    # Start the Bot
-    application.run_polling()
+    # Start the Bot using polling
+    print("Starting bot...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main() 
