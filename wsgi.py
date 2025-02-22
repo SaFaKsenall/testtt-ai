@@ -1,5 +1,5 @@
 from flask import Flask
-from bot import app  # Telegram botu için gerekli olan app'i buradan alıyoruz
+from main import app  # Telegram botu için gerekli olan app'i buradan alıyoruz
 
 # Flask uygulamasını oluştur
 app = Flask(__name__)
