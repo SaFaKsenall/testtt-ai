@@ -18,6 +18,7 @@ import json
 from flask import Flask
 from threading import Thread
 import threading
+from aioflask import Flask
 
 # Load environment variables
 load_dotenv()
@@ -47,12 +48,13 @@ MUSIC_GEN_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-s
 # User states dictionary to track what feature each user is using
 user_states = {}
 
+# Flask uygulamasını async yapın
 app = Flask(__name__)
 app.config['ENV'] = 'production'
 app.config['DEBUG'] = False
 
 @app.route('/')
-def health_check():
+async def health_check():
     return "Bot is running!"
 
 async def transcribe_audio(audio_bytes):
@@ -627,9 +629,8 @@ async def test_connection(application):
     except Exception as e:
         logger.error(f"Telegram API bağlantı hatası: {str(e)}")
 
-async def main():
-    """Botu başlat"""
-    logger.info("Bot başlatılıyor...")
+async def start_bot():
+    """Telegram botunu başlat"""
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
         raise ValueError("TELEGRAM_TOKEN bulunamadı! Lütfen .env dosyanızı kontrol edin.")
@@ -647,27 +648,25 @@ async def main():
 
     # Botu başlat
     logger.info("Bot çalışmaya başladı.")
+    await application.initialize()
+    await application.start()
     await application.run_polling(allowed_updates=Update.ALL_TYPES)
 
-def run_flask():
-    # Koyeb'in PORT environment variable'ını kullan
+async def main():
+    """Ana uygulama başlatıcı"""
+    # Port numarasını Koyeb'den al
     port = int(os.getenv("PORT", 8000))
-    app.run(host='0.0.0.0', port=port)
+    
+    # Bot ve Flask'ı aynı event loop'ta başlat
+    bot_task = asyncio.create_task(start_bot())
+    web_task = asyncio.create_task(app.run_task(host='0.0.0.0', port=port))
+    
+    try:
+        # Her iki görevi de bekle
+        await asyncio.gather(bot_task, web_task)
+    except KeyboardInterrupt:
+        logger.info("Uygulama kapatılıyor...")
 
 if __name__ == '__main__':
-    # Flask'ı ayrı bir thread'de başlat
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
-
-    # Event loop'u oluştur
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-
-    try:
-        # Telegram botunu çalıştır
-        loop.run_until_complete(main())
-    except KeyboardInterrupt:
-        logger.info("Bot kapatılıyor...")
-    finally:
-        loop.close()
+    # Event loop'u oluştur ve ana fonksiyonu çalıştır
+    asyncio.run(main())
