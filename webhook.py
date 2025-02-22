@@ -666,7 +666,7 @@ async def homepage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
 @app.route('/webhook', methods=['POST'])
-async def webhook():
+def webhook():
     """Handle incoming webhook requests"""
     try:
         logger.info("Webhook update received")
@@ -683,8 +683,13 @@ async def webhook():
         update_data = request.get_json(force=True)
         update = Update.de_json(update_data, application.bot)
         
-        # Process the update
-        await application.process_update(update)
+        # Create a new event loop for async operations
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        # Process the update in the event loop
+        loop.run_until_complete(application.process_update(update))
+        
         return Response('ok', status=200)
         
     except Exception as e:
