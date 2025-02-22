@@ -1,12 +1,10 @@
 from flask import Flask
-from main import app  # Telegram botu için gerekli olan app'i buradan alıyoruz
-
-# Flask uygulamasını oluştur
 app = Flask(__name__)
 
 @app.route('/')
-def health_check():
-    return "Bot is running!"
+def hello_world():
+    return 'GreyMatters'
+
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8000)  # Flask uygulamasını başlat
+    app.run()
