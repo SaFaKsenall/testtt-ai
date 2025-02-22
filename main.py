@@ -15,6 +15,9 @@ import speech_recognition as sr
 import tempfile
 import soundfile as sf
 import json
+from flask import Flask
+from threading import Thread
+import threading
 
 # Load environment variables
 load_dotenv()
@@ -22,7 +25,7 @@ load_dotenv()
 # Configure logging with more detail
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.DEBUG  # Changed from INFO to DEBUG for more detail
+    level=logging.INFO
 )
 logger = logging.getLogger(__name__)
 
@@ -43,6 +46,14 @@ MUSIC_GEN_URL = "https://api-inference.huggingface.co/models/facebook/musicgen-s
 
 # User states dictionary to track what feature each user is using
 user_states = {}
+
+app = Flask(__name__)
+app.config['ENV'] = 'production'
+app.config['DEBUG'] = False
+
+@app.route('/')
+def health_check():
+    return "Bot is running!"
 
 async def transcribe_audio(audio_bytes):
     """Transcribe audio using Google Speech Recognition"""
@@ -234,6 +245,7 @@ async def update_processing_message(message, start_time, current_text):
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send welcome message with feature selection buttons"""
+    logger.info("Start komutu alındı.")
     keyboard = [
         [
             InlineKeyboardButton("🎨 Text → Image", callback_data='image_gen'),
@@ -608,25 +620,54 @@ async def homepage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
-def main():
-    """Start the bot"""
-    # Create the Application and pass it your bot's token
+async def test_connection(application):
+    try:
+        await application.bot.get_me()
+        logger.info("Telegram API'ye başarıyla bağlanıldı.")
+    except Exception as e:
+        logger.error(f"Telegram API bağlantı hatası: {str(e)}")
+
+async def main():
+    """Botu başlat"""
+    logger.info("Bot başlatılıyor...")
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
-        raise ValueError("TELEGRAM_TOKEN not found! Please check your .env file.")
+        raise ValueError("TELEGRAM_TOKEN bulunamadı! Lütfen .env dosyanızı kontrol edin.")
     
-    # Build the application
     application = Application.builder().token(token).build()
 
-    # Add handlers
+    # Handler'ları ekle
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT | filters.VOICE, message_handler))
     application.add_handler(CommandHandler("homepage", homepage))
 
-    # Start the Bot using polling
-    print("Starting bot...")
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    # Telegram API bağlantısını test et
+    await test_connection(application)
+
+    # Botu başlat
+    logger.info("Bot çalışmaya başladı.")
+    await application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+def run_flask():
+    # Koyeb'in PORT environment variable'ını kullan
+    port = int(os.getenv("PORT", 8000))
+    app.run(host='0.0.0.0', port=port)
 
 if __name__ == '__main__':
-    main() 
+    # Flask'ı ayrı bir thread'de başlat
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # Event loop'u oluştur
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    try:
+        # Telegram botunu çalıştır
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        logger.info("Bot kapatılıyor...")
+    finally:
+        loop.close()
