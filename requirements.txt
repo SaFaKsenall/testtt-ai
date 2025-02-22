@@ -7,4 +7,5 @@ gTTS==2.5.4
 soundfile==0.13.1
 SpeechRecognition==3.14.1
 Flask==3.1.0
+aioflask==0.4.0
 pip
