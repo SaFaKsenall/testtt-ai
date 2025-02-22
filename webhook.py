@@ -58,6 +58,7 @@ if not TOKEN:
     raise ValueError("No TELEGRAM_TOKEN provided")
 
 application = Application.builder().token(TOKEN).build()
+application.initialize()  # Uygulamayı başlat
 
 # Yöntem 1: Random string oluşturma
 secret_token = secrets.token_hex(32)  # 64 karakterlik güvenli bir token oluşturur
