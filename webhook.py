@@ -667,12 +667,9 @@ async def homepage(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
+    """Handle incoming webhook requests"""
     try:
-        logger.info("Webhook request received")
-        
-        # Log request details
-        logger.debug(f"Headers: {dict(request.headers)}")
-        logger.debug(f"Data: {request.get_data().decode()}")
+        logger.info("Webhook update received")
         
         # Token validation
         auth_header = request.headers.get('Authorization')
@@ -696,22 +693,30 @@ async def webhook():
 
 @app.route('/webhook', methods=['GET'])
 def get_webhook():
+    """Handle GET requests to webhook"""
+    logger.info("GET request received at webhook endpoint")
     return Response("Webhook is active", status=200)
 
-# Basic command handler
-async def start(update, context):
-    await update.message.reply_text("Hello! I'm your bot.")
-
-# Set up handlers
+# Set up message handlers
 def setup_handlers():
-    application.add_handler(CommandHandler("start", start))
+    """Set up message handlers"""
+    logger.info("Setting up message handlers")
+    application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("homepage", homepage))
     application.add_handler(CallbackQueryHandler(button_handler))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     application.add_handler(MessageHandler(filters.VOICE, message_handler))
+    logger.info("Message handlers set up successfully")
+
+# Main function to run the bot
+def main() -> None:
+    """Run the bot."""
+    logger.info("Starting the bot")
+    setup_handlers()
+    logger.info("Bot started successfully")
 
 if __name__ == "__main__":
     config = Config()
     config.bind = [f"0.0.0.0:{int(os.environ.get('PORT', 5000))}"]
-    setup_handlers()
+    main()
     asyncio.run(serve(app, config))
