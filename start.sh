@@ -1,4 +1,6 @@
-#!/bin/bash
-gunicorn --bind 0.0.0.0:5000 wsgi:app &  # Flask arka planda çalışır
-python main.py  # Telegram botu çalışır ve açık kalır
-wait  # Arka planda çalışan işlemleri beklet
+echo "Cloning Repo...."
+git clone https://github.com/LazyDeveloperr/MissPerfect-URL-BOT /MissPerfectURLBOT
+cd /MissPerfectURLBOT
+pip3 install -r requirements.txt
+echo "Starting Bot...."
+python3 bot.py
