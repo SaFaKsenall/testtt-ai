@@ -228,7 +228,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("❓ How to Use", callback_data='help')
         ],
         [
-            InlineKeyboardButton("🐦 Twitter", url='https://x.com/SenalSafak67377')
+            InlineKeyboardButton("🐦 Twitter", url='https://x.com/alphackai')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
