@@ -116,7 +116,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Send processing message
         processing_msg = await update.message.reply_text(
-            "🎤 Your voice message is being processed...\n⏳ Estimated time: 10 seconds"
+            "🎤 Ses mesajınız işleniyor...\n⏳ Tahmini süre: 10 saniye"
         )
         
         # Get voice message file
@@ -131,8 +131,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             countdown_message(
                 processing_msg,
                 10,
-                "🎤 Your voice message is being converted...",
-                "Processing"
+                "🎤 Ses mesajınız dönüştürülüyor...",
+                "İşleniyor"
             )
         )
         
@@ -147,9 +147,9 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Send results
         await update.message.reply_text(
-            f"🎤 Your voice message has been converted:\n\n"
-            f"📝 Original text:\n{recognized_text}\n\n"
-            f"🔄 Translation:\n{translated_text}"
+            f"🎤 Ses mesajınız dönüştürüldü:\n\n"
+            f"📝 Orijinal metin:\n{recognized_text}\n\n"
+            f"🔄 Çeviri:\n{translated_text}"
         )
         
         # Delete processing message
@@ -158,7 +158,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Voice handling error: {str(e)}")
         await update.message.reply_text(
-            "Sorry, an error occurred while processing your voice message. Please try again."
+            "Üzgünüm, ses mesajınızı işlerken bir hata oluştu. Lütfen tekrar deneyin."
         )
 
 async def countdown_message(message, seconds, current_text, phase_name):
@@ -169,7 +169,7 @@ async def countdown_message(message, seconds, current_text, phase_name):
             try:
                 await message.edit_text(
                     f"{current_text}\n\n"
-                    f"⏳ Time remaining for {phase_name}: {remaining} seconds"
+                    f"⏳ {phase_name} için kalan süre: {remaining} saniye"
                 )
             except telegram.error.BadRequest as e:
                 if "Message to edit not found" in str(e):
@@ -191,21 +191,43 @@ async def countdown_message(message, seconds, current_text, phase_name):
 async def enhance_prompt_with_ai(prompt):
     """Use Gemini AI to enhance the prompt for better image generation"""
     try:
-        system_prompt = """You are a visual prompt editor. You need to convert the given Turkish text into a clearer and more understandable English prompt for the AI image generator.\n\nImportant rules:\n- Never add new elements\n- Use only the given elements\n- Do not add extra details like light, angle\n- Only rearrange the given scene to describe it more clearly\n- Write the direct English equivalent and add necessary details\n\nExample input: "A cat lying on top of a BMW car"\nExample output: "A cat lying on top of a BMW car, detailed view"\n\nExample input: "A red-tailed horse running in the forest"\nExample output: "A horse with red tail running in the forest, clear view"\n\nOnly return the prompt, do not add any explanations."""
+        system_prompt = """Sen bir görsel istek çevirmensin. Verilen Türkçe metni Stable Diffusion için net ve detaylı bir İngilizce prompt'a dönüştür.
+
+Önemli kurallar:
+- Orijinal prompt'taki TÜM nesneleri ve öğeleri koru
+- Belirtilen tüm özellikleri (renkler, boyutlar, sayılar) koru
+- Ana konunun doğru şekilde belirtildiğinden emin ol
+- Netlik için minimal ama yardımcı detaylar ekle
+- Basit, doğrudan bir açıklama olarak formatla
+
+Örnek girdi: "Siyah gözlü 2 metre kuyruklu at"
+Örnek çıktı: "A horse with black eyes and a 2-meter long tail, highly detailed"
+
+Sadece çevrilmiş prompt'u döndür, açıklama yapma."""
         
         response = await model.generate_content_async(f"{system_prompt}\n\nInput: {prompt}")
         enhanced = response.text.strip()
+        logger.debug(f"Original prompt: {prompt}")
+        logger.debug(f"AI enhanced prompt: {enhanced}")
         return enhanced
     except Exception as e:
         logger.error(f"AI enhancement error: {str(e)}")
-        return prompt
+        # If enhancement fails, return a basic translation
+        translator = GoogleTranslator(source='tr', target='en')
+        try:
+            return translator.translate(prompt)
+        except:
+            return prompt  # Fallback to original prompt
 
 def enhance_prompt(prompt):
-    """Add minimal enhancements to the prompt"""
+    """Add better enhancements to the prompt"""
+    # Add more specific qualifiers that guide the model better
     enhancements = [
-        "high quality",
-        "detailed",
-        "clear shot"
+        "highly detailed",
+        "sharp focus", 
+        "professional photography",
+        "realistic",
+        "4k"
     ]
     return f"{prompt}, {', '.join(enhancements)}"
 
@@ -213,19 +235,19 @@ async def update_processing_message(message, start_time, current_text):
     """Update the processing message with elapsed time"""
     while True:
         elapsed = int(time.time() - start_time)
-        await message.edit_text(f"{current_text}\n\n⏱️ Elapsed time: {elapsed} seconds")
+        await message.edit_text(f"{current_text}\n\n⏱️ Geçen süre: {elapsed} saniye")
         await asyncio.sleep(1)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send welcome message with feature selection buttons"""
     keyboard = [
         [
-            InlineKeyboardButton("🎨 Text → Image", callback_data='image_gen'),
-            InlineKeyboardButton("🎤 Voice → Text", callback_data='voice_text')
+            InlineKeyboardButton("🎨 Metin → Resim", callback_data='image_gen'),
+            InlineKeyboardButton("🎤 Ses → Metin", callback_data='voice_text')
         ],
         [
-            InlineKeyboardButton("🗣️ Voice Translation", callback_data='voice_translation'),
-            InlineKeyboardButton("❓ How to Use", callback_data='help')
+            InlineKeyboardButton("🗣️ Ses Çevirisi", callback_data='voice_translation'),
+            InlineKeyboardButton("❓ Nasıl Kullanılır", callback_data='help')
         ],
         [
             InlineKeyboardButton("🐦 Twitter", url='https://x.com/alphackai')
@@ -233,7 +255,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     welcome_message = f"""
-Hello, {update.effective_user.username or 'guest'}! I am a very talented AI bot! 🤖\n\nPlease select the feature you would like to use:
+Merhaba, {update.effective_user.username or 'misafir'}! Ben çok yetenekli bir yapay zeka botuyum! 🤖\n\nLütfen kullanmak istediğiniz özelliği seçin:
 """
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
@@ -246,19 +268,19 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == 'image_gen':
         user_states[user_id] = 'image_gen'
-        text = """🎨 Text → Image feature selected!\n\nHow to use it:\n1. Write in detail the image you want to create in Turkish\n\nExample: "A black horse walking on the beach at sunset"\n\nLet's get started! What kind of image would you like to create?\n\nOr Check Out Our Other AI Bots: /start"""
+        text = """🎨 Metin → Resim özelliği seçildi!\n\nNasıl kullanılır:\n1. Oluşturmak istediğiniz resmi Türkçe olarak detaylı bir şekilde yazın\n\nÖrnek: "Gün batımında sahilde yürüyen siyah bir at"\n\nHadi başlayalım! Nasıl bir resim oluşturmak istersiniz?\n\nDiğer Yapay Zeka Botlarımızı İnceleyin: /start"""
         
     elif query.data == 'voice_text':
         user_states[user_id] = 'voice_text'
-        text = """🎤 Voice → Text feature selected!\n\nHow to use it:\n1. Send me a voice message\n\nLet's get started! Send a voice message.\n\nOr Check Out Our Other AI Bots: /start"""
+        text = """🎤 Ses → Metin özelliği seçildi!\n\nNasıl kullanılır:\n1. Bana bir ses mesajı gönderin\n\nHadi başlayalım! Bir ses mesajı gönderin.\n\nDiğer Yapay Zeka Botlarımızı İnceleyin: /start"""
         
     elif query.data == 'voice_translation':
         user_states[user_id] = 'voice_translation'
-        text = """🗣️ Voice Translation feature selected!\n\nHow to use it:\n1. Send me a Turkish voice message\n2. I will first transcribe your message to text\n3. Then I will translate it to English\n4. Finally, I will send you the English voice message\n\nYou will also be able to see both Turkish and English texts.\n\nLet's get started! Send a voice message.\n\nOr Check Out Our Other AI Bots: /start"""
+        text = """🗣️ Ses Çevirisi özelliği seçildi!\n\nNasıl kullanılır:\n1. Bana Türkçe bir ses mesajı gönderin\n2. İlk olarak mesajınızı metne dönüştüreceğim\n3. Sonra İngilizce'ye çevireceğim\n4. Son olarak size İngilizce ses mesajını göndereceğim\n\nAyrıca hem Türkçe hem de İngilizce metinleri görebileceksiniz.\n\nHadi başlayalım! Bir ses mesajı gönderin.\n\nDiğer Yapay Zeka Botlarımızı İnceleyin: /start"""
         
     elif query.data == 'help':
         text = """
-        ❓ Bot Usage Guide\n\n        🎨 Text → Image:\n        • Describe the image you want in Turkish\n        • The more detailed you describe, the better the result\n        • Image generation takes about 20-30 seconds\n\n        🎤 Voice → Text:\n        • Send any voice message\n        • You will receive both the original text and its English translation\n        • The process takes about 10-15 seconds\n\n        🗣️ Voice Translation:\n        • Send a Turkish voice message\n        • You will receive both written and voice translations\n        • The process takes about 15-20 seconds\n\n        ❓ How to Use:\n        • You can use the /start command for usage instructions.\n        """
+        ❓ Bot Kullanım Kılavuzu\n\n        🎨 Metin → Resim:\n        • İstediğiniz resmi Türkçe olarak tanımlayın\n        • Ne kadar detaylı tanımlarsanız, sonuç o kadar iyi olur\n        • Resim oluşturma yaklaşık 20-30 saniye sürer\n\n        🎤 Ses → Metin:\n        • Herhangi bir ses mesajı gönderin\n        • Hem orijinal metni hem de İngilizce çevirisini alacaksınız\n        • İşlem yaklaşık 10-15 saniye sürer\n\n        🗣️ Ses Çevirisi:\n        • Türkçe bir ses mesajı gönderin\n        • Hem yazılı hem de sesli çeviriler alacaksınız\n        • İşlem yaklaşık 15-20 saniye sürer\n\n        ❓ Nasıl Kullanılır:\n        • Kullanım talimatları için /start komutunu kullanabilirsiniz.\n        """
 
     await query.edit_message_text(text=text)
 
@@ -274,7 +296,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # If user hasn't selected a feature, prompt them to do so
     if user_id not in user_states:
         await update.message.reply_text(
-            "Please select the feature you would like to use first.\nFor this, you can use the /start command."
+            "Lütfen önce kullanmak istediğiniz özelliği seçin.\nBunun için /start komutunu kullanabilirsiniz."
         )
         return
     
@@ -284,7 +306,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await generate_image(update, context)
         else:
             await update.message.reply_text(
-                "Please send a text to create an image."
+                "Lütfen resim oluşturmak için bir metin gönderin."
             )
     
     elif user_states[user_id] == 'voice_text':
@@ -292,7 +314,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await handle_voice(update, context)
         else:
             await update.message.reply_text(
-                "Please send a voice message."
+                "Lütfen bir ses mesajı gönderin."
             )
     
     elif user_states[user_id] == 'voice_translation':
@@ -300,7 +322,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await handle_voice_translation(update, context)
         else:
             await update.message.reply_text(
-                "Please send a voice message."
+                "Lütfen bir ses mesajı gönderin."
             )
     
     elif user_states[user_id] == 'music_gen':
@@ -308,7 +330,7 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await handle_music_gen(update, context)
         else:
             await update.message.reply_text(
-                "Please write a description to create music."
+                "Lütfen müzik oluşturmak için bir açıklama yazın."
             )
 
 async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -317,15 +339,15 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text_prompt = update.message.text
         start_time = time.time()
         
-        # First enhance the prompt with AI
-        processing_message = await update.message.reply_text("🤖 Your photo is being prepared...")
+        # Send initial processing message
+        processing_message = await update.message.reply_text("🤖 Fotoğrafınız hazırlanıyor...")
         
         # Start the timer update task
         timer_task = asyncio.create_task(
             update_processing_message(
                 processing_message,
                 start_time,
-                "🤖 Your prompt is being prepared..."
+                "🤖 İsteğiniz hazırlanıyor..."
             )
         )
         
@@ -335,9 +357,9 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Update message with the enhanced prompt
         current_text = (
-            f"🎨 Your image is being created...\n\n"
-            f"Original: '{text_prompt}'\n"
-            f"Edited: '{ai_enhanced_prompt}'"
+            f"🎨 Resminiz oluşturuluyor...\n\n"
+            f"Orijinal: '{text_prompt}'\n"
+            f"Geliştirilen: '{ai_enhanced_prompt}'"
         )
         
         # Update the timer task with new text
@@ -350,22 +372,49 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         )
         
-        # Generate image using Stable Diffusion XL
+        # Better negative prompt
+        negative_prompt = "deformed, distorted, disfigured, poorly drawn, bad anatomy, wrong anatomy, extra limb, missing limb, floating limbs, disconnected limbs, mutation, mutated, ugly, disgusting, blurry, amputation, wrinkles, watermark, signature, text, low quality, worst quality"
+        
+        # Generate image using Stable Diffusion XL with better parameters
         response = requests.post(
             IMAGE_API_URL,
             headers=HEADERS,
             json={
                 "inputs": final_prompt,
                 "parameters": {
-                    "negative_prompt": "blurry, bad quality, distorted, deformed, ugly, bad anatomy, watermark, signature, text, out of frame",
-                    "num_inference_steps": 40,
-                    "guidance_scale": 7.5
+                    "negative_prompt": negative_prompt,
+                    "num_inference_steps": 50,  # Increased from 40
+                    "guidance_scale": 8.5,      # Increased from 7.5
+                    "width": 768,               # Add specific dimensions
+                    "height": 768
                 }
             }
         )
         
+        if response.status_code == 503:
+            # Model is loading, update message and wait
+            await processing_message.edit_text(f"{current_text}\n\n⏳ Model yükleniyor, lütfen bekleyin...")
+            # Wait and retry
+            await asyncio.sleep(20)
+            response = requests.post(
+                IMAGE_API_URL,
+                headers=HEADERS,
+                json={
+                    "inputs": final_prompt,
+                    "parameters": {
+                        "negative_prompt": negative_prompt,
+                        "num_inference_steps": 50,
+                        "guidance_scale": 8.5,
+                        "width": 768,
+                        "height": 768
+                    }
+                }
+            )
+        
         if response.status_code != 200:
-            raise Exception("API request failed")
+            error_content = response.content.decode('utf-8', errors='ignore')
+            logger.error(f"Image API Error: {error_content}")
+            raise Exception(f"API request failed with status {response.status_code}")
         
         # Stop the timer
         timer_task.cancel()
@@ -375,11 +424,12 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         # Get the image data directly from the response
         image_data = BytesIO(response.content)
+        image_data.seek(0)
         
-        # Send the image with time info
+        # Send the image with time info and prompt details
         await update.message.reply_photo(
             photo=image_data,
-            caption=f"✨ Image created in {total_time} seconds."
+            caption=f"✨ Resim {total_time} saniyede oluşturuldu.\n\nAçıklama: {ai_enhanced_prompt}"
         )
         
         # Delete the processing message
@@ -387,14 +437,16 @@ async def generate_image(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     except Exception as e:
         logger.error(f"Error generating image: {str(e)}")
-        await update.message.reply_text("Sorry, an error occurred while generating the image. Please try again.")
+        await update.message.reply_text(
+            "Üzgünüm, resim oluştururken bir hata oluştu. Lütfen farklı bir açıklama ile tekrar deneyin."
+        )
 
 async def handle_voice_translation(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle voice translation messages"""
     try:
         # Send processing message
         processing_msg = await update.message.reply_text(
-            "🎤 Your voice message is being processed...\n⏳ Estimated time: 15 seconds"
+            "🎤 Ses mesajınız işleniyor...\n⏳ Tahmini süre: 15 saniye"
         )
         
         # Get voice message file
@@ -409,8 +461,8 @@ async def handle_voice_translation(update: Update, context: ContextTypes.DEFAULT
             countdown_message(
                 processing_msg,
                 15,
-                "🎤 Your voice message is being translated...",
-                "Processing"
+                "🎤 Ses mesajınız çevriliyor...",
+                "İşleniyor"
             )
         )
         
@@ -429,23 +481,23 @@ async def handle_voice_translation(update: Update, context: ContextTypes.DEFAULT
             
             # Send results
             await update.message.reply_text(
-                f"🎤 Your voice message has been converted:\n\n"
-                f"📝 Turkish:\n{recognized_text}\n\n"
-                f"🔄 English:\n{translated_text}"
+                f"🎤 Ses mesajınız dönüştürüldü:\n\n"
+                f"📝 Türkçe:\n{recognized_text}\n\n"
+                f"🔄 İngilizce:\n{translated_text}"
             )
             
             # Send translated voice message
             await update.message.reply_voice(
                 voice=english_audio,
-                caption="🗣️ English voice message"
+                caption="🗣️ İngilizce ses mesajı"
             )
             
         except Exception as e:
             logger.error(f"Processing error: {str(e)}")
             await update.message.reply_text(
-                "Your voice message was transcribed, but the voice message could not be created:\n\n"
-                f"📝 Turkish:\n{recognized_text}\n\n"
-                f"🔄 English:\n{translated_text}"
+                "Ses mesajınız yazıya dönüştürüldü, ancak ses mesajı oluşturulamadı:\n\n"
+                f"📝 Türkçe:\n{recognized_text}\n\n"
+                f"🔄 İngilizce:\n{translated_text}"
             )
         
         # Delete processing message
@@ -454,7 +506,7 @@ async def handle_voice_translation(update: Update, context: ContextTypes.DEFAULT
     except Exception as e:
         logger.error(f"Voice translation error: {str(e)}")
         await update.message.reply_text(
-            "Sorry, an error occurred during voice translation. Please try again."
+            "Üzgünüm, ses çevirisi sırasında bir hata oluştu. Lütfen tekrar deneyin."
         )
 
 async def generate_music(prompt):
@@ -515,7 +567,10 @@ async def generate_music(prompt):
 
 async def handle_music_gen(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle music generation requests"""
-    pass
+    # Müzik oluşturma işlevselliği henüz uygulanmamış
+    await update.message.reply_text(
+        "Müzik oluşturma özelliği şu anda geliştirme aşamasındadır. Lütfen daha sonra tekrar deneyin."
+    )
 
 async def homepage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Send welcome message with feature selection buttons"""
@@ -523,20 +578,20 @@ async def homepage(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_states.pop(user_id, None)  # Reset user state
     keyboard = [
         [
-            InlineKeyboardButton("🎨 Text → Image", callback_data='image_gen'),
-            InlineKeyboardButton("🎤 Voice → Text", callback_data='voice_text')
+            InlineKeyboardButton("🎨 Metin → Resim", callback_data='image_gen'),
+            InlineKeyboardButton("🎤 Ses → Metin", callback_data='voice_text')
         ],
         [
-            InlineKeyboardButton("🗣️ Voice Translation", callback_data='voice_translation'),
-            InlineKeyboardButton("❓ How to Use", callback_data='help')
+            InlineKeyboardButton("🗣️ Ses Çevirisi", callback_data='voice_translation'),
+            InlineKeyboardButton("❓ Nasıl Kullanılır", callback_data='help')
         ],
         [
-            InlineKeyboardButton("🐦 Twitter", url='https://twitter.com/bot_creator')
+            InlineKeyboardButton("🐦 Twitter", url='https://x.com/SenalSafak67377')
         ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     welcome_message = f"""
-Hello, {update.effective_user.username or 'guest'}! I am a very talented AI bot! 🤖\n\nPlease select the feature you would like to use:
+Merhaba, {update.effective_user.username or 'misafir'}! Ben çok yetenekli bir yapay zeka botuyum! 🤖\n\nLütfen kullanmak istediğiniz özelliği seçin:
 """
     await update.message.reply_text(welcome_message, reply_markup=reply_markup)
 
@@ -545,7 +600,7 @@ def main():
     # Create the Application and pass it your bot's token
     token = os.getenv("TELEGRAM_TOKEN")
     if not token:
-        raise ValueError("TELEGRAM_TOKEN not found! Please check the .env file.")
+        raise ValueError("TELEGRAM_TOKEN bulunamadı! Lütfen .env dosyasını kontrol edin.")
     
     application = Application.builder().token(token).build()
 
@@ -559,4 +614,4 @@ def main():
     application.run_polling()
 
 if __name__ == '__main__':
-    main() 
+    main()
