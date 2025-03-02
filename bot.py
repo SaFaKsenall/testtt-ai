@@ -268,11 +268,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     if query.data == 'image_gen':
         user_states[user_id] = 'image_gen'
-        text = """🎨 Metin → Resim özelliği seçildi!\n\nHow to Use:\n1. Write in detail the image you want to create.\n\nExample: "A black horse walking on the beach at sunset"\n\nLet's get started! What kind of image would you like to create??\n\nCheck Out Our Other Artificial Intelligence Bots: /start"""
+        text = """🎨 Text → Image feature selected!\n\nHow to Use:\n1. Write in detail the image you want to create.\n\nExample: "A black horse walking on the beach at sunset"\n\nLet's get started! What kind of image would you like to create??\n\nCheck Out Our Other Artificial Intelligence Bots: /start"""
         
     elif query.data == 'voice_text':
         user_states[user_id] = 'voice_text'
-        text = """🎤 Ses → Metin özelliği seçildi!\n\nHow to Use:\n1. Send me a voice message\n\nLet's get started! Send a voice message.\n\nCheck Out Our Other Artificial Intelligence Bots: /start"""
+        text = """🎤 Voice → Text feature selected!\n\nHow to Use:\n1. Send me a voice message\n\nLet's get started! Send a voice message.\n\nCheck Out Our Other Artificial Intelligence Bots: /start"""
         
     elif query.data == 'voice_translation':
         user_states[user_id] = 'voice_translation'
