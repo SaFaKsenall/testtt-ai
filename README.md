@@ -19,3 +19,10 @@ To run this bot, you need to have Python installed along with the required depen
 
 ## License
 This project is not licensed for public use. Please contact the author for more information. # telegram-ai-bot
+
+
+
+
+
+
+https://github.com/safaksenal/testtt-ai/compare/main...SaFaKsenall:testtt-ai:patch-2
